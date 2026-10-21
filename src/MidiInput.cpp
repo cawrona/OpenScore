@@ -3,9 +3,19 @@
 
 #include <QMetaObject>
 
+#include <vector>
+
 #ifdef OPENSCORE_WITH_MIDI
 #include <RtMidi.h>
+#endif
 
+struct MidiInput::Impl {
+#ifdef OPENSCORE_WITH_MIDI
+    std::vector<std::unique_ptr<RtMidiIn>> inputs;
+#endif
+};
+
+#ifdef OPENSCORE_WITH_MIDI
 namespace {
 void onMidi(double, std::vector<unsigned char> *msg, void *user)
 {
@@ -24,6 +34,7 @@ void onMidi(double, std::vector<unsigned char> *msg, void *user)
 
 MidiInput::MidiInput(QObject *parent)
     : QObject(parent)
+    , d(new Impl)
 {
     refresh();
 }
@@ -42,7 +53,7 @@ bool MidiInput::available() const
 void MidiInput::refresh()
 {
 #ifdef OPENSCORE_WITH_MIDI
-    m_inputs.clear();
+    d->inputs.clear();
     m_ports.clear();
     try {
         RtMidiIn probe;
@@ -53,7 +64,7 @@ void MidiInput::refresh()
             in->ignoreTypes(true, true, true); // sysex, timing, active sensing
             in->setCallback(&onMidi, this);
             m_ports << QString::fromStdString(probe.getPortName(i));
-            m_inputs.push_back(std::move(in));
+            d->inputs.push_back(std::move(in));
         }
     } catch (RtMidiError &e) {
         qWarning("MIDI: %s", e.getMessage().c_str());

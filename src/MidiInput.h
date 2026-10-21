@@ -5,11 +5,6 @@
 #include <QStringList>
 
 #include <memory>
-#include <vector>
-
-#ifdef OPENSCORE_WITH_MIDI
-class RtMidiIn;
-#endif
 
 // Listens on every MIDI input port (USB / Bluetooth MIDI pedals, keyboards,
 // controllers) and forwards raw messages. Compiles to a no-op without RtMidi.
@@ -33,8 +28,9 @@ signals:
     void portsChanged();
 
 private:
+    // RtMidi 6 moved its classes into a namespace, so forward-declaring
+    // RtMidiIn here would clash. Keep RtMidi out of the header entirely.
+    struct Impl;
+    std::unique_ptr<Impl> d;
     QStringList m_ports;
-#ifdef OPENSCORE_WITH_MIDI
-    std::vector<std::unique_ptr<RtMidiIn>> m_inputs;
-#endif
 };

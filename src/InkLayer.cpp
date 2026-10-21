@@ -146,7 +146,7 @@ const ScoreView::Slot *InkLayer::slotForPage(int page) const
 {
     if (!m_view)
         return nullptr;
-    for (const ScoreView::Slot &s : m_view->slots()) {
+    for (const ScoreView::Slot &s : m_view->pageSlots()) {
         if (s.page == page)
             return &s;
     }
@@ -171,7 +171,7 @@ void InkLayer::rebuildCache()
     if (m_store && m_view) {
         QPainter p(&m_cache);
         p.setRenderHint(QPainter::Antialiasing);
-        for (const ScoreView::Slot &slot : m_view->slots()) {
+        for (const ScoreView::Slot &slot : m_view->pageSlots()) {
             for (const Stroke &s : m_store->strokes(slot.page))
                 drawStroke(&p, s, slot.rect);
         }

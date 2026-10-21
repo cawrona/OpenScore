@@ -29,6 +29,9 @@ qt_add_executable(openscore src/main.cpp)
 qt_add_qml_module(openscore
     URI OpenScore
     VERSION 1.0
+    # Keep the module's files out of build/OpenScore: on case-insensitive
+    # filesystems (macOS) that folder collides with the build/openscore binary.
+    OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml-module
     QML_FILES
         qml/Main.qml
         qml/Theme.qml

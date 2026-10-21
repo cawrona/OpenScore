@@ -46,7 +46,7 @@ public:
     bool loading() const { return m_loading; }
     QString error() const { return m_error; }
 
-    const QVector<Slot> &slots() const { return m_slots; }
+    const QVector<Slot> &pageSlots() const { return m_slots; }
     const Slot *slotAt(const QPointF &p) const;
 
     Q_INVOKABLE void goToPage(int page);
