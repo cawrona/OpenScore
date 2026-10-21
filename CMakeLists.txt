@@ -7,6 +7,8 @@ set(CMAKE_AUTOMOC ON)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Sql Concurrent)
 qt_standard_project_setup()
+# Store QML modules under :/qt/qml/ so QQmlApplicationEngine::loadFromModule() finds them.
+qt_policy(SET QTP0001 NEW)
 
 # --- MuPDF (page rendering) -------------------------------------------------
 find_package(PkgConfig REQUIRED)
