@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=OpenScore
+GenericName=Sheet Music Reader
+Comment=Read, annotate and organize your sheet music
+Exec=openscore %f
+Icon=openscore
+Terminal=false
+Categories=AudioVideo;Audio;Music;Viewer;
+MimeType=application/pdf;
