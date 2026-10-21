@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="OpenScore is a free, open-source sheet music reader for Linux. Page turns with a pedal, pen annotations, and a library that puts what you played last on top.">
+<style>:root{color-scheme:light;}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>OpenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Music&display=swap">
+<style>
+/* Layout concept: one calm column that reads like a printed score. Home, Get it and Roadmap are views of a single page.
+   The one bold move is the pencil: rubric red marks the places a musician would circle. */
+:root {
+  --bg: #f1f3f1;
+  --surface: #fbfcfb;
+  --ink: #14181b;
+  --ink-soft: #56615e;
+  --line: #d3dad6;
+  --accent: #c32a1b;
+  --accent-ink: #ffffff;
+  --code-bg: #e6ebe8;
+  --paper: #fbfaf6;
+  --paper-ink: #1c1f21;
+  --pencil: #d62828;
+  --app-bg: #101012;
+  --app-surface: #1a1a1d;
+  --app-line: #2f2f35;
+  --app-text: #ece8df;
+  --app-dim: #9b978d;
+  --app-accent: #e2b45a;
+  --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --font-body: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-music: 'Noto Music', 'Noto Sans Symbols 2', 'Segoe UI Symbol', serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1113; --surface: #161a1d; --ink: #e8edea; --ink-soft: #93a09b; --line: #263033;
+    --accent: #ff6e59; --accent-ink: #1b0804; --code-bg: #1b2125;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1113; --surface: #161a1d; --ink: #e8edea; --ink-soft: #93a09b; --line: #263033;
+  --accent: #ff6e59; --accent-ink: #1b0804; --code-bg: #1b2125;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: auto; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 30; background: var(--bg);
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.wrap { max-width: 1120px; margin-inline: auto; }
+h1, h2, h3 { margin: 0; font-weight: 400; text-wrap: balance; }
+h1, h2 { font-family: var(--font-display); letter-spacing: -0.012em; line-height: 1.03; }
+h1 { font-size: clamp(2.7rem, 6.2vw, 4.7rem); }
+h2 { font-size: clamp(2rem, 3.8vw, 2.9rem); }
+h3 { font-family: var(--font-body); font-weight: 600; font-size: 1.05rem; line-height: 1.3; }
+p { margin: 0; }
+.lede { font-size: 1.15rem; color: var(--ink-soft); max-width: 34em; }
+.label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+.mono { font-family: var(--font-mono); }
+
+/* ---------- header ---------- */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: var(--bg); clip-path: inset(0 -100vmax);
+  box-shadow: 0 0 0 100vmax var(--bg);
+}
+.top::after { content: ""; position: absolute; left: -100vmax; right: -100vmax; bottom: 0; height: 1px; background: var(--line); }
+.top-in { display: flex; align-items: center; gap: 12px 28px; min-height: 64px; flex-wrap: wrap; padding-block: 8px; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 1.6rem; text-decoration: none; letter-spacing: -0.01em; }
+.brand svg { width: 26px; height: 26px; flex: none; }
+.nav { display: flex; gap: 4px; margin-right: auto; }
+.nav a { text-decoration: none; padding: 6px 12px; border-radius: 6px; font-weight: 500; font-size: 0.95rem; color: var(--ink-soft); }
+.nav a:hover { color: var(--ink); }
+.nav a[aria-current="page"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); border-radius: 0; }
+.top-actions { display: flex; align-items: center; gap: 8px; }
+.icon-btn { background: none; border: 1px solid var(--line); border-radius: 6px; height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 0.9rem; font-weight: 500; }
+.icon-btn:hover { border-color: var(--ink-soft); }
+.icon-btn svg { width: 16px; height: 16px; }
+
+/* ---------- buttons ---------- */
+.btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 600; font-size: 1rem; padding: 0.8rem 1.25rem; border-radius: 6px; border: 1px solid var(--line); background: transparent; }
+.btn:hover { border-color: var(--ink-soft); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.07); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* ---------- views ---------- */
+.view { padding-block: clamp(40px, 7vw, 88px) 24px; }
+.view > * + * { margin-top: clamp(64px, 9vw, 120px); }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr); gap: clamp(32px, 5vw, 72px); align-items: center; }
+.hero-copy { display: flex; flex-direction: column; gap: 24px; align-items: flex-start; }
+.chip { display: inline-flex; gap: 10px; align-items: center; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 10px; color: var(--ink-soft); }
+.chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+h1 .mark { position: relative; display: inline-block; font-style: italic; }
+h1 .mark svg { position: absolute; left: -2%; bottom: -0.1em; width: 104%; height: 0.32em; overflow: visible; }
+h1 .mark path { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
+.fine { font-size: 0.875rem; color: var(--ink-soft); }
+.cmd { display: flex; align-items: center; gap: 10px; background: var(--code-bg); border-radius: 6px; padding: 8px 8px 8px 14px; font-family: var(--font-mono); font-size: 0.82rem; max-width: 100%; }
+.cmd code { overflow-x: auto; white-space: nowrap; min-width: 0; }
+.copy { flex: none; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; }
+.copy:hover { border-color: var(--ink-soft); }
+
+/* ---------- interactive demo ---------- */
+.demo-col { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.device { background: var(--app-bg); color: var(--app-text); border: 1px solid var(--app-line); border-radius: 12px; overflow: hidden; box-shadow: 0 40px 70px -40px rgba(0,0,0,.55); }
+.device:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; }
+.dev-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; font-size: 0.82rem; background: var(--app-surface); border-bottom: 1px solid var(--app-line); }
+.dev-bar .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.dev-bar .pg { color: var(--app-dim); font-variant-numeric: tabular-nums; flex: none; }
+.dev-bar .back { color: var(--app-dim); flex: none; }
+.stage { padding: 14px; display: flex; justify-content: center; background: #09090b; }
+.page { position: relative; width: 100%; max-width: 420px; aspect-ratio: 3 / 4; background: var(--paper); color: var(--paper-ink); user-select: none; }
+.page svg { display: block; width: 100%; height: 100%; }
+.page canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: pan-y; cursor: pointer; }
+.page canvas.draw { touch-action: none; cursor: crosshair; }
+.zones { position: absolute; inset: 0; display: flex; pointer-events: none; }
+.zones span { flex: 0 0 30%; display: grid; place-items: center; font-size: 0.7rem; letter-spacing: .08em; text-transform: uppercase; color: rgba(0,0,0,.0); transition: color .15s; }
+.zones span:nth-child(2) { flex: 1; }
+.page:hover .zones span:not(:nth-child(2)) { color: rgba(0,0,0,.32); }
+.tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 10px; border-top: 1px solid var(--app-line); background: var(--app-surface); }
+.tools button { background: none; border: 0; border-radius: 6px; padding: 7px 11px; font-size: 0.82rem; font-weight: 600; color: var(--app-text); }
+.tools button:hover { background: var(--app-line); }
+.tools button[aria-pressed="true"] { background: var(--app-accent); color: #1a1407; }
+.tools .sep { width: 1px; background: var(--app-line); margin: 4px 4px; }
+.demo-note { font-size: 0.85rem; color: var(--ink-soft); }
+
+/* ---------- library mock ---------- */
+.split { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(32px, 5vw, 72px); align-items: center; }
+.split.flip { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); }
+.copy-col { display: flex; flex-direction: column; gap: 20px; align-items: flex-start; }
+.lib { background: var(--app-bg); color: var(--app-text); border: 1px solid var(--app-line); border-radius: 12px; overflow: hidden; box-shadow: 0 40px 70px -40px rgba(0,0,0,.55); min-width: 0; }
+.lib-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 16px; background: var(--app-surface); border-bottom: 1px solid var(--app-line); font-size: 0.85rem; }
+.lib-bar b { font-family: var(--font-display); font-weight: 400; font-size: 1.2rem; margin-right: auto; }
+.fake-in { background: var(--app-bg); border: 1px solid var(--app-line); border-radius: 4px; padding: 4px 10px; color: var(--app-dim); font-size: 0.78rem; }
+.lib-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.lib-body .label { color: var(--app-dim); }
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 14px; }
+.item { min-width: 0; }
+.cover { aspect-ratio: 3 / 4; background: var(--paper); color: var(--paper-ink); border-radius: 4px; border: 1px solid var(--app-line); overflow: hidden; position: relative; }
+.cover svg { display: block; width: 100%; height: 100%; }
+.item .n { font-size: 0.78rem; font-weight: 600; margin-top: 6px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .s { font-size: 0.7rem; color: var(--app-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item .w { font-size: 0.7rem; color: var(--app-accent); }
+.crumbs { font-size: 0.85rem; color: var(--app-dim); }
+.crumbs b { color: var(--app-text); font-weight: 600; }
+.folder .cover { background: linear-gradient(180deg, #232328, #17171a); }
+.folder .fan { position: absolute; inset: 0; }
+.folder .fan i { position: absolute; width: 58%; aspect-ratio: 3 / 4; background: var(--paper); border-radius: 2px; box-shadow: 0 2px 6px rgba(0,0,0,.4); top: 10%; }
+.folder .fan i:nth-child(1) { left: 10%; transform: rotate(-7deg); }
+.folder .fan i:nth-child(2) { left: 22%; transform: rotate(0deg); top: 14%; }
+.folder .fan i:nth-child(3) { left: 34%; transform: rotate(7deg); top: 18%; }
+.folder .front { position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: #e2b45acf; }
+.folder .front::before { content: ""; position: absolute; left: 0; top: -9px; width: 40%; height: 10px; background: #e2b45acf; border-radius: 0 6px 0 0; }
+.folder .front span { position: absolute; left: 8px; bottom: 6px; font-size: 0.7rem; font-weight: 700; color: #1a1407; }
+
+/* ---------- features ---------- */
+.sec-head { display: flex; flex-direction: column; gap: 14px; max-width: 40em; }
+.features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 40px; margin-top: 40px; }
+.feat { border-top: 1px solid var(--ink); padding: 18px 0 36px; display: flex; flex-direction: column; gap: 8px; }
+.feat .tempo { font-family: var(--font-display); font-style: italic; font-size: 1.1rem; color: var(--accent); }
+.feat p { color: var(--ink-soft); }
+
+/* ---------- pedals ---------- */
+.learn { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 20px; min-width: 0; }
+.learn:focus-visible { outline-offset: 4px; }
+.lrow { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) auto auto; gap: 10px 14px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); transition: background .2s; }
+.lrow:last-of-type { border-bottom: 0; }
+.lrow.fired { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.lrow .act { font-weight: 600; }
+.keys { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+kbd { font-family: var(--font-mono); font-size: 0.78rem; background: var(--code-bg); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 1px 7px; }
+.mini { background: none; border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; font-size: 0.8rem; font-weight: 600; }
+.mini:hover { border-color: var(--ink-soft); }
+.mini.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.lfoot { padding: 12px 0 8px; font-size: 0.85rem; color: var(--ink-soft); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+/* ---------- closing ---------- */
+.closing { border-top: 1px solid var(--ink); padding-top: 36px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 24px; }
+.closing .copy-col { max-width: 34em; }
+
+/* ---------- get ---------- */
+.page-head { display: flex; flex-direction: column; gap: 16px; max-width: 40em; }
+.note { border-left: 3px solid var(--accent); background: var(--surface); padding: 14px 18px; border-radius: 0 6px 6px 0; max-width: 46em; }
+.note b { font-weight: 600; }
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(32px, 5vw, 72px); }
+.block { display: flex; flex-direction: column; gap: 16px; min-width: 0; align-items: flex-start; }
+.block > .cmd, .block > .codebox { align-self: stretch; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); align-self: stretch; flex-wrap: wrap; }
+.tabs button { background: none; border: 0; padding: 8px 14px; font-weight: 600; font-size: 0.9rem; color: var(--ink-soft); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.codebox { position: relative; background: var(--code-bg); border-radius: 6px; min-width: 0; }
+.codebox pre { margin: 0; padding: 16px 16px 16px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.7; }
+.codebox .copy { position: absolute; top: 8px; right: 8px; }
+.table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.table th, .table td { text-align: left; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.table th { font-size: 0.75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+.tscroll { overflow-x: auto; align-self: stretch; }
+.list { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 6px; }
+
+/* ---------- roadmap ---------- */
+.moves { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 40px; }
+.move { border-top: 1px solid var(--ink); padding-top: 18px; display: flex; flex-direction: column; gap: 14px; }
+.move .dyn { font-family: var(--font-display); font-style: italic; font-size: 3rem; line-height: 1; color: var(--accent); }
+.move h3 { font-size: 1.05rem; }
+.move ul { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 8px; color: var(--ink-soft); }
+.move li::marker { color: var(--accent); }
+.help { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.help div { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.help p { color: var(--ink-soft); font-size: 0.95rem; }
+
+/* ---------- footer ---------- */
+.foot { border-top: 1px solid var(--line); margin-top: 96px; padding-block: 28px 40px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 32px; font-size: 0.875rem; color: var(--ink-soft); }
+.foot nav { display: flex; gap: 20px; flex-wrap: wrap; }
+
+@media (max-width: 960px) {
+  .hero, .split, .split.flip, .cols { grid-template-columns: minmax(0, 1fr); }
+  .features, .moves { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .help { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .features, .moves, .help { grid-template-columns: minmax(0, 1fr); }
+  .lrow { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .lrow .keys { grid-column: 1 / -1; order: 3; }
+  .nav { order: 3; width: 100%; }
+  .top-actions { margin-left: auto; }
+  .icon-btn .gh-label { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in wrap">
+    <a class="brand" href="#home" aria-label="OpenScore home">
+      <svg viewBox="0 0 26 26" aria-hidden="true"><g stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="2" y1="6" x2="24" y2="6"/><line x1="2" y1="10.5" x2="24" y2="10.5"/><line x1="2" y1="15" x2="24" y2="15"/><line x1="2" y1="19.5" x2="24" y2="19.5"/></g><circle cx="15" cy="17" r="3.6" fill="var(--accent)"/><line x1="18.3" y1="16.6" x2="18.3" y2="3.5" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round"/></svg>
+      OpenScore
+    </a>
+    <nav class="nav" aria-label="Pages">
+      <a href="#home" data-v="home">Home</a>
+      <a href="#get" data-v="get">Get it</a>
+      <a href="#roadmap" data-v="roadmap">Roadmap</a>
+    </nav>
+    <div class="top-actions">
+      <a class="icon-btn" href="https://github.com/cawrona/openscore" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span class="gh-label">GitHub</span>
+      </a>
+      <button class="icon-btn" id="theme" type="button" aria-label="Switch between light and dark theme">
+        <svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 1a7 7 0 1 0 0 14V1z"/><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ================= HOME ================= -->
+<section class="view" id="view-home" aria-label="Home">
+
+  <div class="hero">
+    <div class="hero-copy">
+      <span class="chip"><i></i>v0.1 · early scaffold · AGPL-3.0</span>
+      <h1>Sheet music that <span class="mark">keeps up<svg viewBox="0 0 180 12" preserveAspectRatio="none" aria-hidden="true"><path d="M2 8 C 28 2, 58 11, 90 5 S 150 9, 178 3"/></svg></span> with you.</h1>
+      <p class="lede">OpenScore is a free, open-source PDF score reader for Linux. Turn pages with a pedal, mark up with a pen, and pick up exactly where you left off.</p>
+      <div class="btn-row">
+        <a class="btn primary" href="#get">Get the source</a>
+        <a class="btn" href="https://github.com/cawrona/openscore" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+      <p class="fine">Native Qt 6 and MuPDF. Not affiliated with forScore.</p>
+    </div>
+
+    <div class="demo-col">
+      <div class="device" id="demo" tabindex="0" aria-label="Interactive score preview. Press the arrow keys or Space to turn pages.">
+        <div class="dev-bar"><span class="back">‹ Library</span><span class="t">Scale Study No. 3</span><span class="pg" id="pg">1 / 3</span></div>
+        <div class="stage">
+          <div class="page" id="page">
+            <div id="score"></div>
+            <canvas id="ink" aria-hidden="true"></canvas>
+            <div class="zones" aria-hidden="true"><span>Back</span><span></span><span>Next</span></div>
+          </div>
+        </div>
+        <div class="tools" role="toolbar" aria-label="Preview tools">
+          <button type="button" data-tool="turn" aria-pressed="true">Turn</button>
+          <button type="button" data-tool="pen" aria-pressed="false">Pen</button>
+          <button type="button" data-tool="hl" aria-pressed="false">Highlight</button>
+          <button type="button" data-tool="erase" aria-pressed="false">Erase</button>
+          <span class="sep" aria-hidden="true"></span>
+          <button type="button" id="undo">Undo</button>
+          <button type="button" id="clear">Clear page</button>
+        </div>
+      </div>
+      <p class="demo-note">A working preview in your browser. Click the page edges or press ← → to turn. Pick Pen to draw with a mouse or stylus; touch always turns pages.</p>
+    </div>
+  </div>
+
+  <div class="split">
+    <div class="copy-col">
+      <span class="label">Library</span>
+      <h2>What you played last is always on top.</h2>
+      <p class="lede">OpenScore reads the folders you already have. Nothing is imported or locked away. Recent scores sit in a strip at the top, and a folder rises as soon as anything inside it is opened.</p>
+      <p class="lede">Rename or move a file in your file manager and its history and annotations follow, because scores are matched by their content.</p>
+    </div>
+    <div class="lib" aria-label="Library preview">
+      <div class="lib-bar"><b>OpenScore</b><span class="fake-in">Search title or composer</span><span class="fake-in">Recent first ▾</span></div>
+      <div class="lib-body">
+        <span class="label">Recently viewed</span>
+        <div class="shelf">
+          <div class="item"><div class="cover" data-cover="3"></div><div class="n">Prelude in C</div><div class="s">J. S. Bach</div><div class="w">Just now</div></div>
+          <div class="item"><div class="cover" data-cover="8"></div><div class="n">Nocturne Op. 9 No. 2</div><div class="s">F. Chopin</div><div class="w">2 hours ago</div></div>
+          <div class="item"><div class="cover" data-cover="21"></div><div class="n">Gymnopédie No. 1</div><div class="s">E. Satie</div><div class="w">Yesterday</div></div>
+          <div class="item"><div class="cover" data-cover="34"></div><div class="n">Ave verum corpus</div><div class="s">W. A. Mozart</div><div class="w">3 days ago</div></div>
+        </div>
+        <div class="crumbs"><b>Library</b></div>
+        <div class="shelf">
+          <div class="item folder"><div class="cover"><div class="fan"><i></i><i></i><i></i></div><div class="front"><span>14 scores</span></div></div><div class="n">Piano</div><div class="s">Opened 2 hours ago</div></div>
+          <div class="item folder"><div class="cover"><div class="fan"><i></i><i></i><i></i></div><div class="front"><span>9 scores</span></div></div><div class="n">Choir</div><div class="s">Opened yesterday</div></div>
+          <div class="item folder"><div class="cover"><div class="fan"><i></i><i></i><i></i></div><div class="front"><span>31 scores</span></div></div><div class="n">Jazz charts</div><div class="s">Opened last week</div></div>
+          <div class="item folder"><div class="cover"><div class="fan"><i></i><i></i><i></i></div><div class="front"><span>6 scores</span></div></div><div class="n">Sight reading</div><div class="s">Not opened yet</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="sec-head">
+      <span class="label">What is in v0.1</span>
+      <h2>Built for the music stand.</h2>
+    </div>
+    <div class="features">
+      <div class="feat"><span class="tempo">Presto</span><h3>Instant page turns</h3><p>MuPDF renders on its own thread and prepares the pages around you ahead of time, so a turn is a texture swap. Single and two-page views.</p></div>
+      <div class="feat"><span class="tempo">Andante</span><h3>Your folders, as they are</h3><p>Titles, composers, page counts and covers come from the PDFs. Files stay where you keep them.</p></div>
+      <div class="feat"><span class="tempo">Con moto</span><h3>Moves keep their history</h3><p>Recents and annotations are tied to the score, so renaming or relocating a file loses nothing.</p></div>
+      <div class="feat"><span class="tempo">Espressivo</span><h3>Pen, highlighter, eraser</h3><p>Pressure-sensitive ink with undo and redo. It is stored separately and never written into your PDF.</p></div>
+      <div class="feat"><span class="tempo">Legato</span><h3>Pedals and MIDI</h3><p>Bluetooth page turners work as keyboards. Any key or MIDI message can be learned in two clicks.</p></div>
+      <div class="feat"><span class="tempo">Dal segno</span><h3>Back where you stopped</h3><p>Open a score and you land on the page you left. Touch turns pages and only the pen draws, so palms never leave marks.</p></div>
+    </div>
+  </div>
+
+  <div class="split flip">
+    <div class="copy-col">
+      <span class="label">Pedals</span>
+      <h2>Any pedal. Any key.</h2>
+      <p class="lede">Most Bluetooth page turners present themselves as a keyboard, so they work the moment they pair. MIDI pedals and controllers are supported when OpenScore is built with RtMidi.</p>
+      <p class="lede">Try the learner on the right. Press Learn, hit a key, then press it again to see the action fire. An input can only do one thing, so assigning it moves it.</p>
+    </div>
+    <div class="learn" id="learn" tabindex="0" aria-label="Key learning demo">
+      <div id="lrows"></div>
+      <div class="lfoot"><span id="lstatus">Click here and press a bound key to see it fire.</span><button class="mini" type="button" id="lreset">Reset</button></div>
+    </div>
+  </div>
+
+  <div class="closing">
+    <div class="copy-col">
+      <h2>Try it on your own scores.</h2>
+      <p class="lede">Version 0.1 ships as source. Build it in a few minutes and point it at a folder of PDFs.</p>
+    </div>
+    <div class="btn-row">
+      <a class="btn primary" href="#get">Get the source</a>
+      <a class="btn" href="#roadmap">See the roadmap</a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= GET ================= -->
+<section class="view" id="view-get" aria-label="Get OpenScore" hidden>
+  <div class="page-head">
+    <span class="label">Get it</span>
+    <h1>Get OpenScore</h1>
+    <p class="lede">Version 0.1 is source only. Prebuilt packages are planned.</p>
+  </div>
+
+  <div class="note"><b>This is a very early release.</b> The code has not had its first full compile yet, so expect to fix a build error or two. If you hit one, open an issue and paste the compiler output.</div>
+
+  <div class="cols">
+    <div class="block">
+      <h2>Download</h2>
+      <div class="btn-row">
+        <a class="btn primary" href="https://github.com/cawrona/openscore/archive/refs/heads/main.zip" target="_blank" rel="noopener">Source (.zip)</a>
+        <a class="btn" href="https://github.com/cawrona/openscore" target="_blank" rel="noopener">GitHub repository</a>
+      </div>
+      <p class="fine">Or clone it:</p>
+      <div class="cmd"><code>git clone https://github.com/cawrona/openscore.git</code><button class="copy" type="button" data-copy="git clone https://github.com/cawrona/openscore.git">Copy</button></div>
+      <div class="tscroll">
+        <table class="table">
+          <thead><tr><th>Package</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Source</td><td>Available</td></tr>
+            <tr><td>Flatpak</td><td>Planned</td></tr>
+            <tr><td>AppImage</td><td>Planned</td></tr>
+            <tr><td>Distro packages</td><td>Maintainers welcome</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="block">
+      <h2>Build</h2>
+      <div class="tabs" role="tablist" aria-label="Distribution">
+        <button type="button" role="tab" aria-selected="true" data-tab="deb">Debian / Ubuntu</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="fed">Fedora</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="arch">Arch</button>
+      </div>
+      <div class="codebox"><button class="copy" type="button" id="copybuild">Copy</button><pre id="buildcode"></pre></div>
+      <p class="fine" id="tabnote"></p>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="block">
+      <h2>What you need</h2>
+      <ul class="list">
+        <li>Qt 6.5 or newer: Quick, Quick Controls 2, Sql (SQLite) and Concurrent</li>
+        <li>MuPDF development files</li>
+        <li>CMake 3.21 or newer and a C++17 compiler</li>
+        <li>RtMidi, only if you want MIDI pedals</li>
+      </ul>
+    </div>
+    <div class="block">
+      <h2>Where things live</h2>
+      <div class="tscroll">
+        <table class="table">
+          <tbody>
+            <tr><th>Scores</th><td class="mono">~/Documents/Scores</td></tr>
+            <tr><th>Library, ink</th><td class="mono">~/.local/share/openscore/</td></tr>
+            <tr><th>Covers</th><td class="mono">~/.cache/openscore/</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fine">Your library folder is yours to change from inside the app. PDFs are never modified.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ROADMAP ================= -->
+<section class="view" id="view-roadmap" aria-label="Roadmap" hidden>
+  <div class="page-head">
+    <span class="label">Roadmap</span>
+    <h1>Where it is going.</h1>
+    <p class="lede">Dynamics mark how soon each piece is planned. Plans change, and pull requests move things up.</p>
+  </div>
+
+  <div class="moves">
+    <div class="move"><span class="dyn">f</span><h3>Now</h3>
+      <ul><li>First full compile and build fixes on several distros</li><li>Pinch-zoom and crop margins</li><li>Half-page turns</li><li>Testing with real pens and pedals</li></ul></div>
+    <div class="move"><span class="dyn">mf</span><h3>Next</h3>
+      <ul><li>Setlists, tags and a metadata editor</li><li>Bookmarks and a page index</li><li>Drag and drop into folders</li></ul></div>
+    <div class="move"><span class="dyn">p</span><h3>Later</h3>
+      <ul><li>Annotation layers and stamps</li><li>A custom scene-graph ink renderer for even lower pen latency</li><li>Import from forScore backups</li><li>Flatpak packaging</li></ul></div>
+  </div>
+
+  <div>
+    <div class="sec-head"><span class="label">Help wanted</span><h2>Four easy ways in.</h2></div>
+    <div class="help" style="margin-top:32px">
+      <div><h3>Build it</h3><p>Try it on your distro and report what breaks.</p></div>
+      <div><h3>Play it</h3><p>Test with a stylus, a graphics tablet or a Bluetooth pedal.</p></div>
+      <div><h3>Show it</h3><p>Send screenshots and short clips for the README.</p></div>
+      <div><h3>Package it</h3><p>Flatpak, AUR, deb and rpm maintainers are very welcome.</p></div>
+    </div>
+    <div class="btn-row" style="margin-top:32px">
+      <a class="btn primary" href="https://github.com/cawrona/openscore/issues" target="_blank" rel="noopener">Open an issue</a>
+      <a class="btn" href="https://github.com/cawrona/openscore" target="_blank" rel="noopener">Browse the code</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="wrap foot">
+  <span>OpenScore is licensed AGPL-3.0-or-later. It is not affiliated with forScore or its makers.</span>
+  <nav aria-label="Footer"><a href="https://github.com/cawrona/openscore" target="_blank" rel="noopener">GitHub</a><a href="https://github.com/cawrona/openscore/issues" target="_blank" rel="noopener">Issues</a><a href="#get">Get it</a></nav>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  /* ---------- theme ---------- */
+  var root = document.documentElement;
+  try { var saved = localStorage.getItem('os-theme'); if (saved) root.setAttribute('data-theme', saved); } catch (e) {}
+  $('#theme').addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('os-theme', next); } catch (e) {}
+  });
+
+  /* ---------- routing: plain #tokens ---------- */
+  var views = ['home', 'get', 'roadmap'];
+  function route() {
+    var h = (location.hash || '').slice(1);
+    if (views.indexOf(h) < 0) h = 'home';
+    views.forEach(function (v) { $('#view-' + v).hidden = v !== h; });
+    $$('.nav a').forEach(function (a) { a.setAttribute('aria-current', a.getAttribute('data-v') === h ? 'page' : 'false'); });
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', route);
+  route();
+
+  /* ---------- helpers ---------- */
+  function rng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function copyText(text, btn) {
+    var done = function () { var o = btn.textContent; btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = o; }, 1400); };
+    var fallback = function () {
+      var holder = btn.parentNode.querySelector('code, pre');
+      if (holder) { var r = document.createRange(); r.selectNodeContents(holder); var s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+    };
+    try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+  }
+  $$('[data-copy]').forEach(function (b) { b.addEventListener('click', function () { copyText(b.getAttribute('data-copy'), b); }); });
+
+  /* ---------- generated score pages ---------- */
+  var NS = 'http://www.w3.org/2000/svg';
+  function pageSVG(p) {
+    var r = rng(11 + p * 7), o = [];
+    o.push('<svg viewBox="0 0 600 800" xmlns="' + NS + '" role="img" aria-label="Demo exercise, page ' + (p + 1) + '" fill="none" stroke="currentColor">');
+    if (p === 0) {
+      o.push('<text x="300" y="64" text-anchor="middle" fill="currentColor" stroke="none" font-family="Instrument Serif, Georgia, serif" font-size="34">Scale Study No. 3</text>');
+      o.push('<text x="300" y="86" text-anchor="middle" fill="currentColor" stroke="none" font-family="Hanken Grotesk, sans-serif" font-size="12" opacity=".6">demo exercise</text>');
+    }
+    var systems = p === 0 ? 5 : 6, top = p === 0 ? 124 : 76, gap = 118, step = 3 + (p % 3);
+    for (var s = 0; s < systems; s++) {
+      var y0 = top + s * gap, i;
+      for (i = 0; i < 5; i++) o.push('<line x1="40" y1="' + (y0 + i * 8) + '" x2="560" y2="' + (y0 + i * 8) + '" stroke-width=".9"/>');
+      o.push('<line x1="40" y1="' + y0 + '" x2="40" y2="' + (y0 + 32) + '" stroke-width="1.4"/>');
+      o.push('<text x="46" y="' + (y0 + 31) + '" fill="currentColor" stroke="none" font-family="Noto Music, serif" font-size="46">\u{1D11E}</text>');
+      var xs = 92;
+      if (s === 0 && p === 0) {
+        o.push('<text x="92" y="' + (y0 + 15) + '" fill="currentColor" stroke="none" font-family="Instrument Serif, serif" font-weight="700" font-size="22">4</text>');
+        o.push('<text x="92" y="' + (y0 + 31) + '" fill="currentColor" stroke="none" font-family="Instrument Serif, serif" font-weight="700" font-size="22">4</text>');
+        xs = 118;
+      }
+      var mw = (556 - xs) / 4;
+      for (var m = 0; m < 4; m++) {
+        for (var k = 0; k < 4; k++) {
+          step += [-2, -1, -1, 0, 1, 1, 2][Math.floor(r() * 7)];
+          step = Math.max(0, Math.min(8, step));
+          var cx = xs + m * mw + (k + 0.5) * (mw / 4), cy = y0 + 32 - step * 4, half = r() < 0.12;
+          o.push('<ellipse cx="' + cx.toFixed(1) + '" cy="' + cy + '" rx="5.4" ry="3.8" transform="rotate(-20 ' + cx.toFixed(1) + ' ' + cy + ')" ' + (half ? 'stroke-width="1.5"' : 'fill="currentColor" stroke="none"') + '/>');
+          if (step < 4) o.push('<line x1="' + (cx + 4.8).toFixed(1) + '" y1="' + (cy - 1) + '" x2="' + (cx + 4.8).toFixed(1) + '" y2="' + (cy - 29) + '" stroke-width="1.3"/>');
+          else o.push('<line x1="' + (cx - 4.8).toFixed(1) + '" y1="' + (cy + 1) + '" x2="' + (cx - 4.8).toFixed(1) + '" y2="' + (cy + 29) + '" stroke-width="1.3"/>');
+        }
+        var bx = xs + (m + 1) * mw;
+        o.push('<line x1="' + bx.toFixed(1) + '" y1="' + y0 + '" x2="' + bx.toFixed(1) + '" y2="' + (y0 + 32) + '" stroke-width="' + (m === 3 && s === systems - 1 && p === 2 ? 3 : 1.1) + '"/>');
+      }
+    }
+    o.push('<text x="300" y="782" text-anchor="middle" fill="currentColor" stroke="none" font-family="Hanken Grotesk, sans-serif" font-size="12" opacity=".6">' + (p + 1) + '</text>');
+    o.push('</svg>');
+    return o.join('');
+  }
+  var pages = [0, 1, 2].map(pageSVG);
+
+  function coverSVG(seed) {
+    var r = rng(seed), o = ['<svg viewBox="0 0 120 160" xmlns="' + NS + '" aria-hidden="true" fill="none" stroke="currentColor" preserveAspectRatio="xMidYMid slice">'];
+    o.push('<rect x="22" y="14" width="76" height="3" fill="currentColor" stroke="none" opacity=".75"/>');
+    o.push('<rect x="38" y="22" width="44" height="2" fill="currentColor" stroke="none" opacity=".4"/>');
+    for (var s = 0; s < 4; s++) {
+      var y = 44 + s * 27, st = 3;
+      for (var l = 0; l < 5; l++) o.push('<line x1="12" y1="' + (y + l * 3.2) + '" x2="108" y2="' + (y + l * 3.2) + '" stroke-width=".5" opacity=".8"/>');
+      for (var n = 0; n < 7; n++) {
+        st = Math.max(0, Math.min(8, st + Math.floor(r() * 5) - 2));
+        var cx = 20 + n * 12.5, cy = y + 12.8 - st * 1.6;
+        o.push('<ellipse cx="' + cx + '" cy="' + cy.toFixed(1) + '" rx="2.1" ry="1.5" fill="currentColor" stroke="none"/>');
+        o.push('<line x1="' + (cx + 1.9) + '" y1="' + cy.toFixed(1) + '" x2="' + (cx + 1.9) + '" y2="' + (cy - 9).toFixed(1) + '" stroke-width=".6"/>');
+      }
+    }
+    o.push('</svg>');
+    return o.join('');
+  }
+  $$('[data-cover]').forEach(function (el) { el.innerHTML = coverSVG(parseInt(el.getAttribute('data-cover'), 10)); });
+
+  /* ---------- interactive demo ---------- */
+  var demo = $('#demo'), pageEl = $('#page'), scoreEl = $('#score'), canvas = $('#ink'), ctx = canvas.getContext('2d');
+  var cur = 0, tool = 'turn', strokes = [[], [], []], undoStack = [], gesture = null, dragStart = null;
+
+  function showPage() {
+    scoreEl.innerHTML = pages[cur];
+    $('#pg').textContent = (cur + 1) + ' / ' + pages.length;
+    redraw();
+  }
+  function go(d) { var n = Math.max(0, Math.min(pages.length - 1, cur + d)); if (n !== cur) { cur = n; showPage(); } }
+
+  function resize() {
+    var dpr = window.devicePixelRatio || 1, b = pageEl.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.round(b.width * dpr)); canvas.height = Math.max(1, Math.round(b.height * dpr));
+    redraw();
+  }
+  function drawStroke(s) {
+    var w = canvas.width, h = canvas.height, i;
+    if (!s.pts.length) return;
+    ctx.lineJoin = 'round';
+    if (s.tool === 'hl') {
+      ctx.strokeStyle = 'rgba(255,200,0,.38)'; ctx.lineWidth = w * 0.024; ctx.lineCap = 'butt';
+      ctx.beginPath(); ctx.moveTo(s.pts[0][0] * w, s.pts[0][1] * h);
+      for (i = 1; i < s.pts.length; i++) ctx.lineTo(s.pts[i][0] * w, s.pts[i][1] * h);
+      if (s.pts.length === 1) ctx.lineTo(s.pts[0][0] * w + 0.1, s.pts[0][1] * h);
+      ctx.stroke(); return;
+    }
+    ctx.strokeStyle = 'rgb(214,40,40)'; ctx.fillStyle = 'rgb(214,40,40)'; ctx.lineCap = 'round';
+    var base = w * 0.0048;
+    if (s.pts.length === 1) { ctx.beginPath(); ctx.arc(s.pts[0][0] * w, s.pts[0][1] * h, base * 0.5, 0, 6.2832); ctx.fill(); return; }
+    for (i = 1; i < s.pts.length; i++) {
+      var a = s.pts[i - 1], b = s.pts[i], pr = (a[2] + b[2]) / 2;
+      ctx.lineWidth = base * (0.4 + 0.6 * pr);
+      ctx.beginPath(); ctx.moveTo(a[0] * w, a[1] * h); ctx.lineTo(b[0] * w, b[1] * h); ctx.stroke();
+    }
+  }
+  var raf = 0;
+  function redraw() { cancelAnimationFrame(raf); raf = requestAnimationFrame(function () { ctx.clearRect(0, 0, canvas.width, canvas.height); strokes[cur].forEach(drawStroke); }); }
+
+  function norm(e) {
+    var b = canvas.getBoundingClientRect();
+    return [(e.clientX - b.left) / b.width, (e.clientY - b.top) / b.height, b];
+  }
+  function distSeg(px, py, ax, ay, bx, by) {
+    var dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
+    var x = ax + dx * t - px, y = ay + dy * t - py; return Math.sqrt(x * x + y * y);
+  }
+  function eraseAt(n, aspect) {
+    var list = strokes[cur], removed = false, r = 0.03;
+    for (var i = list.length - 1; i >= 0; i--) {
+      var pts = list[i].pts, hit = false;
+      for (var k = 0; k < pts.length && !hit; k++) {
+        var a = pts[k], b = pts[k + 1] || a;
+        hit = distSeg(n[0], n[1] * aspect, a[0], a[1] * aspect, b[0], b[1] * aspect) <= r;
+      }
+      if (hit) { list.splice(i, 1); removed = true; }
+    }
+    return removed;
+  }
+  function snapshot() { undoStack.push({ page: cur, snap: JSON.stringify(strokes[cur]) }); if (undoStack.length > 60) undoStack.shift(); }
+
+  canvas.addEventListener('pointerdown', function (e) {
+    demo.focus({ preventScroll: true });
+    var n = norm(e);
+    dragStart = { x: e.clientX, y: e.clientY, type: e.pointerType };
+    if (tool === 'turn' || e.pointerType === 'touch') return;
+    if (e.button !== 0) return;
+    canvas.setPointerCapture(e.pointerId);
+    snapshot();
+    if (tool === 'erase') { gesture = { erase: true, changed: eraseAt(n, n[2].height / n[2].width) }; if (gesture.changed) redraw(); return; }
+    var s = { tool: tool, pts: [[n[0], n[1], e.pointerType === 'mouse' ? 1 : (e.pressure || 1)]] };
+    strokes[cur].push(s); gesture = { stroke: s }; redraw();
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (!gesture) return;
+    var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    if (!evs.length) evs = [e];
+    evs.forEach(function (ev) {
+      var n = norm(ev);
+      if (gesture.erase) { if (eraseAt(n, n[2].height / n[2].width)) gesture.changed = true; }
+      else gesture.stroke.pts.push([n[0], n[1], ev.pointerType === 'mouse' ? 1 : (ev.pressure || 1)]);
+    });
+    redraw();
+  });
+  function endPointer(e) {
+    if (gesture) {
+      if (gesture.erase && !gesture.changed) undoStack.pop();
+      gesture = null; dragStart = null; return;
+    }
+    if (dragStart && Math.hypot(e.clientX - dragStart.x, e.clientY - dragStart.y) < 10 && (tool === 'turn' || dragStart.type === 'touch')) {
+      var b = canvas.getBoundingClientRect(), x = (e.clientX - b.left) / b.width;
+      if (x < 0.3) go(-1); else if (x > 0.7) go(1);
+    }
+    dragStart = null;
+  }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', function () { gesture = null; dragStart = null; });
+
+  $$('[data-tool]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      tool = b.getAttribute('data-tool');
+      $$('[data-tool]').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      canvas.className = tool === 'turn' ? '' : 'draw';
+    });
+  });
+  function undo() {
+    var u = undoStack.pop(); if (!u) return;
+    strokes[u.page] = JSON.parse(u.snap); if (u.page !== cur) { cur = u.page; showPage(); } else redraw();
+  }
+  $('#undo').addEventListener('click', undo);
+  $('#clear').addEventListener('click', function () { if (strokes[cur].length) { snapshot(); strokes[cur] = []; redraw(); } });
+
+  demo.addEventListener('keydown', function (e) {
+    var k = e.key, handled = true;
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || k === ' ') go(1);
+    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp' || k === 'Backspace') go(-1);
+    else if (k === 'Home') { cur = 0; showPage(); }
+    else if (k === 'End') { cur = pages.length - 1; showPage(); }
+    else if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'z') undo();
+    else handled = false;
+    if (handled) e.preventDefault();
+  });
+
+  showPage();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(pageEl); else window.addEventListener('resize', resize);
+  resize();
+
+  /* ---------- key learner ---------- */
+  var DEFAULTS = [
+    { id: 'next', label: 'Next page', keys: ['ArrowRight', 'PageDown'] },
+    { id: 'prev', label: 'Previous page', keys: ['ArrowLeft', 'PageUp'] },
+    { id: 'undo', label: 'Undo ink', keys: ['Control+z'] }
+  ];
+  var acts = JSON.parse(JSON.stringify(DEFAULTS)), learning = null, firedTimer = 0;
+  var NAMES = { ArrowRight: '→', ArrowLeft: '←', ArrowUp: '↑', ArrowDown: '↓', ' ': 'Space', PageDown: 'PageDown', PageUp: 'PageUp' };
+  function pretty(c) { return c.split('+').map(function (p) { return NAMES[p] || (p.length === 1 ? p.toUpperCase() : p); }).join(' + '); }
+  function combo(e) { return (e.ctrlKey ? 'Control+' : '') + (e.shiftKey ? 'Shift+' : '') + (e.altKey ? 'Alt+' : '') + (e.key.length === 1 ? e.key.toLowerCase() : e.key); }
+  function drawLearn() {
+    var box = $('#lrows'); box.innerHTML = '';
+    acts.forEach(function (a) {
+      var row = document.createElement('div'); row.className = 'lrow'; row.setAttribute('data-id', a.id);
+      var name = document.createElement('span'); name.className = 'act'; name.textContent = a.label;
+      var keys = document.createElement('span'); keys.className = 'keys';
+      if (!a.keys.length) { var none = document.createElement('span'); none.className = 'fine'; none.textContent = 'Unassigned'; keys.appendChild(none); }
+      a.keys.forEach(function (k) { var kb = document.createElement('kbd'); kb.textContent = pretty(k); keys.appendChild(kb); });
+      var learn = document.createElement('button'); learn.type = 'button'; learn.className = 'mini' + (learning === a.id ? ' on' : '');
+      learn.textContent = learning === a.id ? 'Listening…' : 'Learn';
+      learn.addEventListener('click', function (ev) { ev.stopPropagation(); learning = learning === a.id ? null : a.id; setStatus(learning ? 'Press a key or pedal. Escape cancels.' : ''); drawLearn(); });
+      var clr = document.createElement('button'); clr.type = 'button'; clr.className = 'mini'; clr.textContent = 'Clear'; clr.setAttribute('aria-label', 'Clear ' + a.label);
+      clr.addEventListener('click', function (ev) { ev.stopPropagation(); a.keys = []; drawLearn(); });
+      row.appendChild(name); row.appendChild(keys); row.appendChild(learn); row.appendChild(clr);
+      box.appendChild(row);
+    });
+  }
+  function setStatus(t) { $('#lstatus').textContent = t || 'Click here and press a bound key to see it fire.'; }
+  function isMod(k) { return k === 'Control' || k === 'Shift' || k === 'Alt' || k === 'Meta' || k === 'CapsLock'; }
+  document.addEventListener('keydown', function (e) {
+    if (!learning || isMod(e.key)) return;
+    e.preventDefault(); e.stopPropagation();
+    if (e.key === 'Escape') { learning = null; setStatus(''); drawLearn(); return; }
+    var c = combo(e), id = learning;
+    acts.forEach(function (a) { a.keys = a.keys.filter(function (k) { return k !== c; }); });
+    acts.filter(function (a) { return a.id === id; })[0].keys.push(c);
+    learning = null; setStatus('Bound ' + pretty(c) + '. Press it again to test.'); drawLearn();
+  }, true);
+  $('#learn').addEventListener('keydown', function (e) {
+    if (learning || isMod(e.key)) return;
+    var c = combo(e), hit = acts.filter(function (a) { return a.keys.indexOf(c) >= 0; })[0];
+    if (!hit) return;
+    e.preventDefault();
+    var row = $('.lrow[data-id="' + hit.id + '"]'); row.classList.add('fired');
+    clearTimeout(firedTimer); firedTimer = setTimeout(function () { row.classList.remove('fired'); }, 350);
+    setStatus(hit.label + ' fired.');
+  });
+  $('#lreset').addEventListener('click', function () { acts = JSON.parse(JSON.stringify(DEFAULTS)); learning = null; setStatus(''); drawLearn(); });
+  drawLearn();
+
+  /* ---------- build tabs ---------- */
+  var BUILD = {
+    deb: {
+      note: 'Needs Ubuntu 24.04 or Debian 13 or newer for Qt 6.5.',
+      cmd: 'sudo apt install build-essential cmake pkg-config qt6-base-dev qt6-declarative-dev \\\n  qml6-module-qtquick-controls qml6-module-qtquick-dialogs \\\n  libqt6sql6-sqlite libmupdf-dev librtmidi-dev\n\ncmake -S . -B build -DCMAKE_BUILD_TYPE=Release\ncmake --build build -j\n./build/openscore'
+    },
+    fed: {
+      note: 'Package names for Fedora are a best guess and have not been tested.',
+      cmd: 'sudo dnf install gcc-c++ cmake pkgconf-pkg-config qt6-qtbase-devel \\\n  qt6-qtdeclarative-devel mupdf-devel rtmidi-devel\n\ncmake -S . -B build -DCMAKE_BUILD_TYPE=Release\ncmake --build build -j\n./build/openscore'
+    },
+    arch: {
+      note: 'Package names for Arch are a best guess and have not been tested.',
+      cmd: 'sudo pacman -S base-devel cmake qt6-base qt6-declarative mupdf rtmidi\n\ncmake -S . -B build -DCMAKE_BUILD_TYPE=Release\ncmake --build build -j\n./build/openscore'
+    }
+  };
+  var tab = 'deb';
+  function drawBuild() {
+    $('#buildcode').textContent = BUILD[tab].cmd; $('#tabnote').textContent = BUILD[tab].note;
+    $$('[data-tab]').forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === tab ? 'true' : 'false'); });
+  }
+  $$('[data-tab]').forEach(function (b) { b.addEventListener('click', function () { tab = b.getAttribute('data-tab'); drawBuild(); }); });
+  $('#copybuild').addEventListener('click', function () { copyText(BUILD[tab].cmd, this); });
+  drawBuild();
+})();
+</script>
+</body>
+</html>
