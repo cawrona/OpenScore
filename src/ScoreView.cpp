@@ -170,8 +170,8 @@ QVector<ScoreView::Slot> ScoreView::layoutFor(int firstPage) const
         const QSizeF ps = m_sizes[p];
         const qreal sc = qMin(slotW / ps.width(), slotH / ps.height());
         // Snap to whole device pixels so the texture maps 1:1 onto the screen.
-        const qreal w = qMax(1.0, qRound(ps.width() * sc * d)) / d;
-        const qreal h = qMax(1.0, qRound(ps.height() * sc * d)) / d;
+        const qreal w = qMax<qreal>(1.0, qRound(ps.width() * sc * d)) / d;
+        const qreal h = qMax<qreal>(1.0, qRound(ps.height() * sc * d)) / d;
         const qreal x = kMargin + i * (slotW + kMargin) + (slotW - w) / 2;
         const qreal y = kMargin + (slotH - h) / 2;
         out.push_back({p, QRectF(qRound(x * d) / d, qRound(y * d) / d, w, h)});
