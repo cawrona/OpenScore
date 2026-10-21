@@ -20,7 +20,7 @@ if(NOT MUPDF_FOUND)
 endif()
 
 # --- RtMidi (optional, MIDI pedals / controllers) ---------------------------
-pkg_check_modules(RTMIDI QUIET rtmidi)
+pkg_check_modules(RTMIDI QUIET IMPORTED_TARGET rtmidi)
 
 set_source_files_properties(qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
@@ -63,8 +63,9 @@ endif()
 
 if(RTMIDI_FOUND)
     target_compile_definitions(openscore PRIVATE OPENSCORE_WITH_MIDI)
-    target_include_directories(openscore PRIVATE ${RTMIDI_INCLUDE_DIRS})
-    target_link_libraries(openscore PRIVATE ${RTMIDI_LIBRARIES})
+    # The imported target carries the include and library paths (Homebrew keeps
+    # RtMidi outside the default linker search path).
+    target_link_libraries(openscore PRIVATE PkgConfig::RTMIDI)
     message(STATUS "MIDI support: enabled (RtMidi)")
 else()
     message(STATUS "MIDI support: disabled (install librtmidi-dev to enable)")
